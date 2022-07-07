@@ -27,7 +27,7 @@ def upgrade():
     sa.Column('is_bot', sa.Boolean(), nullable=False),
     sa.Column('language_code', sa.String(length=255), nullable=False),
     sa.Column('is_superuser', sa.Boolean(), nullable=False),
-    sa.Column('last_activity', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('last_activity', sa.DateTime(timezone=True), nullable=False),
     sa.Column('registration_date', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id', 'uuid'),
     sa.UniqueConstraint('first_name'),

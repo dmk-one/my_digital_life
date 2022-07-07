@@ -21,9 +21,10 @@ class Customer(AbstractORMBaseModel):
     tg_id = Column(Integer(), unique=True, nullable=False)
     username = Column(String(255), nullable=False, unique=True, index=True)
     first_name = Column(String(255), nullable=False, unique=True)
+    phone_number = Column(Integer(), nullable=True)
     is_bot = Column(Boolean, nullable=False, default=False)
     language_code = Column(String(255), nullable=False)
     is_superuser = Column(Boolean, nullable=False, default=False)
-    last_activity = Column(DateTime(timezone=settings.USE_TIMEZONE), onupdate=func.now(), nullable=True)
+    last_activity = Column(DateTime(timezone=settings.USE_TIMEZONE), onupdate=func.now(), nullable=False)
     registration_date = Column(DateTime(timezone=settings.USE_TIMEZONE), server_default=func.now(), nullable=False)
 

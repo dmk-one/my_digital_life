@@ -10,7 +10,7 @@ from sqlalchemy import pool
 from alembic import context
 
 from settings import settings
-from service.provider import models as orm_models
+from provider import models as orm_models
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

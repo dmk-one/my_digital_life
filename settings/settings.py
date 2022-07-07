@@ -9,15 +9,12 @@ DB_PASSWORD = 'dmk5402'
 DB_PORT = 5432
 
 SQLALCHEMY_URL = f'postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
-SQLALCHEMY_ECHO = False
-SQLALCHEMY_POOL_SIZE = 5
-SQLALCHEMY_MAX_OVERFLOW = 2
-
 ASYNC_SQLALCHEMY_URL = f'postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
 
 engine = create_async_engine(
     ASYNC_SQLALCHEMY_URL
 )
+a = engine.
 session_factory = sessionmaker(engine, class_=AsyncSession)
 
 session = session_factory()
