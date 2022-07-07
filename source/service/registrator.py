@@ -1,7 +1,8 @@
+from aiogram import types
 from aiogram.dispatcher import Dispatcher
 from aiogram.dispatcher.filters import Text
 
-from service import handlers, admin, FSMAdmin
+from source.service import handlers, admin, FSMAdmin
 
 
 
@@ -10,6 +11,7 @@ def register_handlers_with_param(
 ):
     dispatcher.register_message_handler(handlers.get_btc_price, commands=['eth_price'])
     dispatcher.register_message_handler(handlers.get_eth_price, commands=['eth_price'])
+    dispatcher.register_message_handler(handlers.phone, commands=['share_num'])
     dispatcher.register_message_handler(handlers.get_keyboards, commands=['keyboards'])
 
 
@@ -30,4 +32,4 @@ def register_handlers_with_state(
 def register_handlers_without_param(
     dispatcher: Dispatcher
 ):
-    dispatcher.register_message_handler(handlers.return_message)
+    dispatcher.register_message_handler(handlers.return_message, content_types= types.ContentTypes.CONTACT)

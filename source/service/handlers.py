@@ -22,6 +22,13 @@ async def get_btc_price(
     await mess.answer(f'BTC price: {round(price, 2)} $')
 
 
+async def phone(
+    mess: types.Message
+):
+    print(mess)
+    await mess.answer(f'-----')
+
+
 async def get_eth_price(
     mess: types.Message
 ):
@@ -38,5 +45,5 @@ async def get_eth_price(
 async def return_message(
     mess: types.Message
 ):
-    print('return meeeesss')
+    print(mess.contact.phone_number)
     await mess.answer(f'Your message: {mess.text}')
