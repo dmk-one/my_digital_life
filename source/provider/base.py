@@ -2,7 +2,6 @@ from typing import (
     Dict, Callable, Union, Optional, Mapping, Iterable, Any, Type, Tuple, List, Sequence
 )
 import orjson as json
-from aioredis import Redis
 from sqlalchemy import (
     Table, Column, and_, any_, select, insert, update, delete, func, nullslast
 )
@@ -11,56 +10,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select, Insert, Update, Delete, distinct
 from sqlalchemy.sql.expression import BinaryExpression, or_
 from sqlalchemy.sql.selectable import Alias
-from asyncpg.exceptions import UniqueViolationError
 from sqlalchemy_utils.functions import get_primary_keys
-from wampify.story import *
 
+from source.service import domain
+from source.session import async_session
 from .shared.utils import clear_from_ellipsis
 from . import models as orm_models
-
-
-class BaseAlchemyProvider:
-    """
-    Base provider for each provider which works with Postgresql through
-    sqlalchemy.ext.asyncio.AsyncSession and async_engine.
-    Uses settings.ASYNC_SQLALCHEMY_URL to work with PostgresqlDB
-    """
-
-    session: AsyncSession
-
-    async def __ainit__(
-        self
-    ):
-        """
-        Gets sqlalchemy.ext.asyncio.AsyncSession from self._story object
-        which was got from ContextVar in parent class.
-        self.session will use in child classes
-        """
-        await super().__ainit__()
-        self.session = self._story.postgres
-
-
-class BaseTimescaleAlchemyProvider(BaseAlchemyProvider):
-
-    """
-    Base provider for each provider which will work with TimescaleDB.
-    Uses settings.ASYNC_TIMESCALE_SQLALCHEMY_URL to work with TimescaleDB.
-    Uses sqlalchemy.ext.asyncio.AsyncSession to work with DB
-    """
-
-    timescale_session: AsyncSession
-
-    async def __ainit__(
-        self
-    ):
-        """
-        Gets sqlalchemy.ext.asyncio.AsyncSession from self._story object
-        which was got from ContextVar in parent class.
-        self.timescale_session WILL NOT use in child classes,
-        you can use it manually or override this constructor in child classes
-        """
-        await super().__ainit__()
-        self.timescale_session = self._story.timescale
 
 
 class AlchemyFilters:
@@ -143,7 +98,7 @@ class AlchemyFilters:
         try:
             return self._mapper
         except AttributeError:
-            raise AttributeMustBeSetException
+            raise Exception('Attribute Must Be Set Exception')
 
     def _get_table(
         self,
@@ -187,12 +142,12 @@ class AlchemyFilters:
                 tables: List[Table] = reference.property.mapper.tables
                 return tables[0]
             except (IndexError, AttributeError):
-                raise IncorrectReferenceNameException
+                raise Exception('Incorrect Reference Name Exception')
 
         try:
             return self._table
         except AttributeError:
-            raise AttributeMustBeSetException
+            raise Exception('Attribute Must Be Set Exception')
 
     def _get_column(
         self,
@@ -212,7 +167,7 @@ class AlchemyFilters:
         if isinstance(column, Column):
             return column
 
-        raise ColumnDoesNotExistException
+        raise Exception('Column Does Not Exist Exception')
 
     def _build_expression(
         self,
@@ -252,8 +207,10 @@ class AlchemyFilters:
         expression by column of related table or alias.
         reference_name = 'orm_model1' means use column from OrmModel1 table.
         """
-        column_name, *operator_name = lookup.split(self.LOOKUP_STRING)
-        operator_name = operator_name[-1] if operator_name else self.EQUAL_OPERATOR
+        if self.LOOKUP_STRING not in lookup:
+            lookup = lookup + self.LOOKUP_STRING + self.EQUAL_OPERATOR
+
+        column_name, *_, operator_name = lookup.split(self.LOOKUP_STRING)
         try:
             # self_method this is method that implemented in class Filters in Provider
             self_method: Callable = getattr(self, column_name)
@@ -272,7 +229,7 @@ class AlchemyFilters:
 
         lookup_operator = self.LOOKUP_OPERATORS.get(operator_name)
         if not callable(lookup_operator):
-            raise LookupOperatorNotFoundException
+            raise Exception('Lookup Operator Not Found Exception')
         return lookup_operator(column, value)
 
     def build_where_clause(
@@ -288,36 +245,18 @@ class AlchemyFilters:
         """
         E = []
         for l, v in filters.items():
-            if l == 'or':
-                if type(v) != list:
-                    raise Exception
-                or_list = []
-                for value in v:
-                    e = self.build_where_clause(
-                        filters=value
-                    )
-                    or_list.append(e)
-                E.append(or_(*or_list))
-            elif type(v) == dict:
-                self_method = getattr(self, l, ...)
-                if self_method is ...:
-                    e = self.build_where_clause(
-                        reference_name=l,
-                        filters=v
-                    )
-                else:
-                    e = self_method(v)
+            self_method = getattr(self, l, None)
+            if self_method is not None:
+                e = self_method(v)
+            elif isinstance(v, Mapping):
+                e = self.build_where_clause(reference_name=l, filters=v)
             else:
-                e = self._build_expression(
-                    lookup=l,
-                    value=v,
-                    reference_name=reference_name
-                )
-                E.append(e)
+                e = self._build_expression(lookup=l, value=v, reference_name=reference_name)
+            E.append(e)
         return and_(*E)
 
 
-class BaseAlchemyModelProvider(BaseAlchemyProvider):
+class BaseAlchemyModelProvider:
     """
     Base provider which implements query building by passing
     filters to it methods
@@ -354,9 +293,9 @@ class BaseAlchemyModelProvider(BaseAlchemyProvider):
     multiple orm models objects to another type object. It uses in select,
     bulk_insert, bulk_update methods
 
-    _does_not_exist_exception is optional exception object or type which is
-    used in get method to raise it if there is no records which fit in filters
     """
+
+    session: AsyncSession
 
     _mapper: Type[orm_models.ORMBaseModel]
     _usage_mappers: Optional[Tuple[Type[orm_models.ORMBaseModel]]] = None
@@ -377,7 +316,8 @@ class BaseAlchemyModelProvider(BaseAlchemyProvider):
     _single_record_adapter: Callable
     _multiple_records_adapter: Callable
 
-    _does_not_exist_exception: Optional[Type[ObjectDoesNotExist]] = ObjectDoesNotExist
+    _does_not_exist_exception: Optional[str] = 'Object Does Not Exist'
+
 
     class Filters(AlchemyFilters):
         """
@@ -389,7 +329,7 @@ class BaseAlchemyModelProvider(BaseAlchemyProvider):
         try:
             return self._mapper
         except AttributeError:
-            raise AttributeMustBeSetException
+            raise Exception('Attribute Must Be Set Exception')
 
     def _get_table(
         self,
@@ -414,7 +354,7 @@ class BaseAlchemyModelProvider(BaseAlchemyProvider):
                 tables: List[Table] = reference.property.mapper.tables
                 return tables[0]
             except (IndexError, AttributeError):
-                raise IncorrectReferenceNameException
+                raise Exception('Incorrect Reference Name Exception')
 
         if not self._table:
             return self._get_mapper.__table__
@@ -471,7 +411,7 @@ class BaseAlchemyModelProvider(BaseAlchemyProvider):
         if isinstance(column, Column):
             return column
 
-        raise ColumnDoesNotExistException
+        raise Exception('Column Does Not Exist Exception')
 
     @property
     def _get_select_stmt(self) -> Select:
@@ -488,29 +428,29 @@ class BaseAlchemyModelProvider(BaseAlchemyProvider):
         try:
             return self._single_record_adapter
         except AttributeError:
-            raise AttributeMustBeSetException
+            raise Exception('Attribute Must Be Set Exception')
 
     @property
     def _get_multiple_records_adapter(self) -> Callable:
         try:
             return self._multiple_records_adapter
         except AttributeError:
-            raise AttributeMustBeSetException
+            raise Exception('Attribute Must Be Set Exception')
 
     @property
     def _get_sorting_columns(self) -> Tuple[str]:
         try:
             return self._sorting_columns
         except AttributeError:
-            raise AttributeMustBeSetException
+            raise Exception('Attribute Must Be Set Exception')
 
-    async def __ainit__(
+    def __init__(
         self
     ):
         """
         Initializes provider object and bind it Filters object
         """
-        await super().__ainit__()
+        self.session = async_session
         self._filters = self.Filters()
         self._filters._mapper = self._get_mapper
         self._filters._table = self._get_table()
@@ -673,6 +613,7 @@ class BaseAlchemyModelProvider(BaseAlchemyProvider):
         insert_stmt = insert_stmt.values(**values)
 
         insert_stmt = self._form_returning_stmt(stmt=insert_stmt)
+        print('\nSTMT', insert_stmt)
 
         return await self.session.scalar(insert_stmt)
 
@@ -796,19 +737,19 @@ class BaseAlchemyModelProvider(BaseAlchemyProvider):
 
     async def get(
         self,
-        **filters: Mapping
+        filters: Union[Mapping, List] = {}
     ):
         """
         """
         filters = clear_from_ellipsis(filters)
 
         if not filters:
-            raise FiltersMustBePassedException
+            raise Exception('Filters Must Be Passed Exception')
 
         record = await self._do_get(filters=filters)
 
         if not record:
-            raise self._does_not_exist_exception
+            raise Exception(self._does_not_exist_exception)
 
         return await self._get_single_record_adapter(*record)
 
@@ -834,15 +775,15 @@ class BaseAlchemyModelProvider(BaseAlchemyProvider):
         """
         Makes insert and returns self.get
         """
+        print('\nVALUES', values)
         values = clear_from_ellipsis(values)
+        print('\nVALUES EL', values)
 
         first_pk_column_name: str = self._get_first_pk_column_name
-        try:
-            record_pk_value: Union[int, str] = await self._do_insert(**values)
-        except IntegrityError as e:
-            raise ObjectAlreadyExist(str(e.__dict__['orig']))
+        record_pk_value: Union[int, str] = await self._do_insert(**values)
+
         return await self.get(
-            **{ first_pk_column_name: record_pk_value }
+            filters={first_pk_column_name + '__e': record_pk_value}
         )
 
     async def bulk_insert(
@@ -874,16 +815,17 @@ class BaseAlchemyModelProvider(BaseAlchemyProvider):
         for column_name, value in values.items():
             column: Column = self._get_column(column_name)
             if column.unique:
-                raise ColumnIsUniqueException
+                raise Exception('Column Is Unique Exception')
 
         try:
-            return await self.get(**values)
-        except self._does_not_exist_exception:
+            return await self.get(filters={**values})
+        except:
             return await self.insert(**values)
 
     async def update(
         self,
-        **kwargs
+        filters: Union[Mapping, Dict] = {},
+        **kwargs,
     ):
         """
         All keys in kwargs which contains self._filters.LOOKUP_STRING is
@@ -893,11 +835,11 @@ class BaseAlchemyModelProvider(BaseAlchemyProvider):
         name column
         """
         kwargs = clear_from_ellipsis(kwargs)
+        filters = clear_from_ellipsis(filters)
         # Separate filters and values from kwargs,
         # so filters is string that contains LOOKUP_STRING
         # and values is regular string
         # that does not contain LOOKUP_STRING
-        filters: Dict[str, Any] = dict()
         values: Dict[str, Any] = dict()
         for key, value in kwargs.items():
             if self._filters.LOOKUP_STRING in key:
@@ -906,7 +848,7 @@ class BaseAlchemyModelProvider(BaseAlchemyProvider):
                 values[key] = value
 
         if not filters:
-            raise FiltersMustBePassedException
+            raise Exception('Filters Must Be Passed Exception')
 
         if not values:
             return await self.get(filters=filters)
@@ -915,11 +857,12 @@ class BaseAlchemyModelProvider(BaseAlchemyProvider):
         record_pk_value: Union[int, str] = await self._do_update(filters, values)
 
         return await self.get(
-            **{ first_pk_column_name: record_pk_value }
+            filters={ first_pk_column_name: record_pk_value }
         )
 
     async def bulk_update(
         self,
+        filters: Union[Mapping, Dict] = {},
         **kwargs
     ):
         """
@@ -930,12 +873,12 @@ class BaseAlchemyModelProvider(BaseAlchemyProvider):
         name column
         """
         kwargs = clear_from_ellipsis(kwargs)
+        filters = clear_from_ellipsis(filters)
 
         # Separate filters and values from kwargs,
         # so filters is string that contains LOOKUP_STRING
         # and values is regular string
         # that does not contain LOOKUP_STRING
-        filters: Dict[str, Any] = dict()
         values: Dict[str, Any] = dict()
         for key, value in kwargs.items():
             if self._filters.LOOKUP_STRING in key:
@@ -944,7 +887,7 @@ class BaseAlchemyModelProvider(BaseAlchemyProvider):
                 values[key] = value
 
         if not filters:
-            raise FiltersMustBePassedException
+            raise Exception('Filters Must Be Passed Exception')
 
         first_pk_column_name: str = self._get_first_pk_column_name
         records_pk_values: List[Union[int, str]] = await self._do_bulk_update(filters, values)
@@ -978,10 +921,10 @@ class BaseAlchemyModelProvider(BaseAlchemyProvider):
                 values[key] = value
                 column: Column = self._get_column(key)
                 if column.unique:
-                    raise ColumnIsUniqueException
+                    raise Exception('Column Is Unique Exception')
 
         if not filters:
-            raise FiltersMustBePassedException
+            raise Exception('Filters Must Be Passed Exception')
 
         try:
             return await self.update(**kwargs)
@@ -998,7 +941,7 @@ class BaseAlchemyModelProvider(BaseAlchemyProvider):
         filters = clear_from_ellipsis(filters)
         # If not filters raise exception
         if not filters:
-            raise FiltersMustBePassedException
+            raise Exception('Filters Must Be Passed Exception')
 
         await self._do_delete(filters=filters)
 
@@ -1010,106 +953,3 @@ class BaseAlchemyModelProvider(BaseAlchemyProvider):
         Delete all rows from table that satisfies to filters
         """
         return await self.delete(filters=filters)
-
-
-class RedisProvider(BaseProvider):
-
-    """
-    Base provider to work with Redis
-    """
-    redis: Redis
-
-    async def __ainit__(
-        self
-    ):
-        """
-        Gets object which implements Redis interface
-        """
-        await super().__ainit__()
-        self.redis = self._story.redis
-
-
-class BaseRedisModelProvider(RedisProvider):
-    """
-    Implements Facade of Redis
-    https://refactoring.guru/ru/design-patterns/facade
-    """
-
-    async def set(
-        self,
-        key: Any,
-        value: Any,
-    ):
-        key = json.dumps(key)
-        value = json.dumps(value)
-
-        await self.redis.set(name=key, value=value)
-
-    async def get(
-        self,
-        key: Any
-    ) -> Any:
-        key = json.dumps(key)
-        value = await self.redis.get(name=key)
-        if value:
-            return json.loads(value)
-
-    async def hset(
-        self,
-        hash_name: Any,
-        key: Any,
-        value: Any,
-    ):
-        hash_name = json.dumps(hash_name)
-        key = json.dumps(key)
-        value = json.dumps(value)
-
-        await self.redis.hset(name=hash_name, key=key, value=value)
-
-    async def hget(
-        self,
-        hash_name: str,
-        key: Any,
-    ) -> Any:
-        hash_name = json.dumps(hash_name)
-        key = json.dumps(key)
-        value = await self.redis.hget(name=hash_name, key=key)
-        if value:
-            return json.loads(value)
-
-    async def hmget(
-        self,
-        hash_name: str,
-        keys: Sequence[Any]
-    ) -> Iterable[Optional[Any]]:
-        hash_name = json.dumps(hash_name)
-        values = await self.redis.hmget(
-            name=hash_name,
-            keys=keys
-        )
-        return json.loads(values)
-
-    async def hdelete(
-        self,
-        hash_name: Any,
-        key: Optional[Any] = None
-    ):
-        hash_name = json.dumps(hash_name)
-        if key:
-            key = json.dumps(key)
-            return await self.redis.hdel(name=hash_name, key=key)
-
-        await self.redis.hdel(name=hash_name)
-
-    async def keys(
-        self,
-        key_sub: str
-    ) -> Optional[Union[str, bytes]]:
-        return await self.redis.keys(f'*{key_sub}*')
-
-    async def delete(
-        self,
-        key: Any
-    ):
-        key = json.dumps(key)
-        await self.redis.delete(key)

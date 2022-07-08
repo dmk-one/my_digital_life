@@ -3,11 +3,6 @@ from aiogram import types
 from keyboards import keyb
 
 
-
-
-
-
-
 async def get_keyboards(
     mess: types.Message
 ):
