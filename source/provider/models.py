@@ -12,14 +12,14 @@ class AbstractORMBaseModel(ORMBaseModel):
     id = Column(BigInteger, primary_key=True, autoincrement=True, unique=True, nullable=False)
 
 
-class User(AbstractORMBaseModel):
-    __tablename__ = 'user'
+class Users(AbstractORMBaseModel):
+    __tablename__ = 'users'
 
-    tg_id = Column(Integer(), unique=True, nullable=False)
+    tg_id = Column(BigInteger(), unique=True, nullable=False)
     username = Column(String(255), nullable=False, unique=True, index=True)
-    first_name = Column(String(255), nullable=True, unique=True)
+    first_name = Column(String(255), nullable=False, unique=True)
     last_name = Column(String(255), nullable=True, unique=True)
-    phone_number = Column(Integer(), nullable=True)
+    phone_number = Column(BigInteger(), nullable=True)
     is_bot = Column(Boolean, nullable=False, default=False)
     language_code = Column(String(255), nullable=False)
     added_to_attachment_menu = Column(Boolean, nullable=True, default=False)

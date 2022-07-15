@@ -25,7 +25,6 @@ async def get_keyboards(
 async def phone(
     mess: types.Message
 ):
-    print(mess)
     await mess.answer(f'-----')
 
 
@@ -34,5 +33,4 @@ async def phone(
 async def return_message(
     mess: types.Message
 ):
-    print(mess.contact.phone_number)
     await mess.answer(f'Your message: {mess.text}')

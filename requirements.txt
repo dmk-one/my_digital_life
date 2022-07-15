@@ -1,0 +1,8 @@
+aiogram==2.21
+alembic==1.8.1
+orjson==3.7.7
+pydantic==1.9.1
+requests==2.28.1
+SQLAlchemy==1.4.39
+SQLAlchemy_Utils==0.38.3
+psycopg2-binary==2.9.3

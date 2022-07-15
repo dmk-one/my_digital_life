@@ -1,15 +1,15 @@
 import datetime
 
 from source.service import domain
-from source.provider.user import UserProvider
+from source.provider.user import UsersProvider
 
 
 class UserService:
 
-    _provider: UserProvider
+    _provider: UsersProvider
 
     def __init__(self):
-        self._provider = UserProvider()
+        self._provider = UsersProvider()
 
     async def create(
         self,
@@ -27,7 +27,7 @@ class UserService:
         last_activity: datetime.datetime,
         registration_date: datetime.datetime,
         phone_number: int = ...
-    ) -> domain.User:
+    ) -> domain.Users:
 
         user = await self._provider.insert(
             tg_id=tg_id,
@@ -53,7 +53,7 @@ class UserService:
         self,
         tg_id: int = ...,
         phone_number: int = ...
-    ) -> domain.User:
+    ) -> domain.Users:
 
         return await self._provider.get(
             filters={

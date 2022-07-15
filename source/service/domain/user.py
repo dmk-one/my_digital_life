@@ -3,7 +3,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 
-class User(BaseModel):
+class Users(BaseModel):
     tg_id: int
     username: str
     first_name: Optional[str]
@@ -21,4 +21,4 @@ class User(BaseModel):
 
 
 class UserList(BaseModel):
-    items: List[User] = []
+    items: List[Users] = []

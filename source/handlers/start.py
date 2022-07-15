@@ -6,19 +6,22 @@ from source.service.user import UserService
 
 _s_user = UserService()
 
+
 async def start_bot(
     mess: types.Message
 ):
-    print('STTTART', mess.from_user)
+    user_name = mess.from_user.first_name + mess.from_user.last_name \
+        if mess.from_user.last_name else mess.from_user.first_name
 
     try:
         # TODO update last_activity if exist
-        user = await _s_user.get(
+        await _s_user.get(
             tg_id=mess.from_user.id
         )
-        await mess.answer(f'Welcome back {mess.from_user.first_name} {mess.from_user.last_name}!!!')
+
+        await mess.answer(f'Welcome back {user_name}!!!')
     except:
-        user = await _s_user.create(
+        await _s_user.create(
             tg_id=mess.from_user.id,
             username=mess.from_user.username,
             first_name=mess.from_user.first_name,
@@ -33,5 +36,9 @@ async def start_bot(
             last_activity=datetime.now(),
             registration_date=datetime.now()
         )
-        print('\nUSERRR', user)
-        await mess.answer(f'Hello {mess.from_user.first_name} {mess.from_user.last_name}!!!')
+
+        await _s_user.get(
+            tg_id=mess.from_user.id
+        )
+
+        await mess.answer(f'Hello {user_name}!!!')

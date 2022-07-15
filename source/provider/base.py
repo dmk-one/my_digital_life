@@ -613,9 +613,9 @@ class BaseAlchemyModelProvider:
         insert_stmt = insert_stmt.values(**values)
 
         insert_stmt = self._form_returning_stmt(stmt=insert_stmt)
-        print('\nSTMT', insert_stmt)
-
-        return await self.session.scalar(insert_stmt)
+        result = await self.session.scalar(insert_stmt)
+        await self.session.commit()
+        return result
 
     async def _do_bulk_insert(
         self,
@@ -632,7 +632,9 @@ class BaseAlchemyModelProvider:
 
         insert_stmt = self._form_returning_stmt(stmt=insert_stmt)
 
-        return await self.session.scalars(insert_stmt)
+        result = await self.session.scalar(insert_stmt)
+        await self.session.commit()
+        return result
 
     async def _do_update(
         self,
@@ -646,7 +648,10 @@ class BaseAlchemyModelProvider:
 
         # something went wrong, we couldn't find any solutions then `execution_options={"synchronize_session": False}`
         # see more in https://stackoverflow.com/questions/51221686/sqlalchemy-cannot-evaluate-binaryexpression-with-operator
-        return await self.session.scalar(stmt, execution_options={"synchronize_session": False})
+
+        result = await self.session.scalar(stmt, execution_options={"synchronize_session": False})
+        await self.session.commit()
+        return result
 
     async def _do_bulk_update(
         self,
@@ -660,7 +665,10 @@ class BaseAlchemyModelProvider:
 
         # something went wrong, we couldn't find any solutions then `execution_options={"synchronize_session": False}`
         # see more in https://stackoverflow.com/questions/51221686/sqlalchemy-cannot-evaluate-binaryexpression-with-operator
-        return await self.session.scalars(stmt, execution_options={"synchronize_session": False})
+
+        result = await self.session.scalar(stmt, execution_options={"synchronize_session": False})
+        await self.session.commit()
+        return result
 
     async def _do_delete(
         self,
@@ -775,9 +783,7 @@ class BaseAlchemyModelProvider:
         """
         Makes insert and returns self.get
         """
-        print('\nVALUES', values)
         values = clear_from_ellipsis(values)
-        print('\nVALUES EL', values)
 
         first_pk_column_name: str = self._get_first_pk_column_name
         record_pk_value: Union[int, str] = await self._do_insert(**values)
