@@ -8,7 +8,7 @@ async def on_start(_):
 
 
 registrator.register_start_handlers(dispatcher=dispatcher)
-registrator.register_crypto_handlers(dispatcher=dispatcher)
+registrator.register_assets_handlers(dispatcher=dispatcher)
 registrator.register_admin_handlers(dispatcher=dispatcher)
 registrator.register_user_handlers(dispatcher=dispatcher)
 registrator.register_handlers_without_param(dispatcher=dispatcher)

@@ -30,3 +30,10 @@ class Users(AbstractORMBaseModel):
     last_activity = Column(DateTime(timezone=settings.USE_TIMEZONE), onupdate=func.now(), nullable=False)
     registration_date = Column(DateTime(timezone=settings.USE_TIMEZONE), server_default=func.now(), nullable=False)
 
+
+class Assets(AbstractORMBaseModel):
+    __tablename__ = 'assets'
+
+    tg_id = Column(BigInteger, ForeignKey(f'{Users.__tablename__}.tg_id', ondelete='CASCADE'))
+    assets = Column(JSON)
+

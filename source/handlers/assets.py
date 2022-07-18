@@ -3,6 +3,12 @@ from aiogram import types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 
+from keyboards import assets
+from source.service.assets import AssetsService
+
+
+service = AssetsService()
+
 
 class FSMCrypto(StatesGroup):
     crypto_name = State()
@@ -28,8 +34,17 @@ async def get_crypto_price(
     await state.finish()
 
 
-# async def cancel_handler(
-#     *args,
-#     state: FSMContext
-# ):
-#     await state.finish()
+async def get_assets_menu(
+    mess: types.Message
+):
+    await mess.answer('Меню активов:', reply_markup=assets)
+
+
+async def get_crypto_assets(
+    mess: types.Message
+):
+    a = await service.get(mess.from_user.id)
+    print(a)
+    await mess.answer('Мои активы:')
+    for crypto_ticker, value in a.assets.items():
+        await mess.answer(f'{crypto_ticker} - {value}')

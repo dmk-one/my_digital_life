@@ -1,15 +1,15 @@
 from aiogram import types
-from keyboards import keyb
+from keyboards import main_menu
 from source.service.user import UserService
 
 
 service = UserService()
 
 
-async def get_keyboards(
+async def get_main_menu_keyboards(
     mess: types.Message
 ):
-    await mess.answer('Keyboards activated!', reply_markup=keyb)
+    await mess.answer('Главное меню:', reply_markup=main_menu)
 
 
 async def add_user_phone(
