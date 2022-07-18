@@ -48,7 +48,6 @@ class UserService:
 
         return user
 
-
     async def get(
         self,
         tg_id: int = ...,
@@ -59,5 +58,28 @@ class UserService:
             filters={
                 'tg_id': tg_id,
                 'phone_number': phone_number
+            }
+        )
+
+    async def add_user_phone(
+        self,
+        tg_id: int,
+        phone_number: int
+    ):
+        await self._provider.update(
+            phone_number=phone_number,
+            filters={
+                'tg_id': tg_id
+            }
+        )
+
+    async def update_last_activity(
+        self,
+        tg_id: int
+    ):
+        await self._provider.update(
+            last_activity=datetime.datetime.now(),
+            filters={
+                'tg_id': tg_id
             }
         )

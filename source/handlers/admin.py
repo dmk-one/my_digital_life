@@ -8,6 +8,7 @@ class FSMAdmin(StatesGroup):
     photo = State()
     name = State()
 
+
 admin_iset = [1299170162, ]
 
 
@@ -60,16 +61,16 @@ async def load_name(
         await state.finish()
 
 
-async def cancel_handler(
-    mess: types.Message,
-    state: FSMContext
-):
-    if mess.from_user.id in admin_iset:
-        current_state = await state.get_state()
-        if current_state is None:
-            return
-        await state.finish()
-        await mess.reply('OK')
+# async def cancel_handler(
+#     mess: types.Message,
+#     state: FSMContext
+# ):
+#     if mess.from_user.id in admin_iset:
+#         current_state = await state.get_state()
+#         if current_state is None:
+#             return
+#         await state.finish()
+#         await mess.reply('OK')
 
 
 

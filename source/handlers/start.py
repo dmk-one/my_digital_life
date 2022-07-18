@@ -14,8 +14,7 @@ async def start_bot(
         if mess.from_user.last_name else mess.from_user.first_name
 
     try:
-        # TODO update last_activity if exist
-        await _s_user.get(
+        await _s_user.update_last_activity(
             tg_id=mess.from_user.id
         )
 
