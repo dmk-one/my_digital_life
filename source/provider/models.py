@@ -2,6 +2,7 @@ from sqlalchemy import *
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.sql import func
 from settings import settings
+from source.service import domain
 
 ORMBaseModel = declarative_base()
 
@@ -35,5 +36,9 @@ class Assets(AbstractORMBaseModel):
     __tablename__ = 'assets'
 
     tg_id = Column(BigInteger, ForeignKey(f'{Users.__tablename__}.tg_id', ondelete='CASCADE'))
+    type = Column(SmallInteger(), nullable=False, default=domain.AssetsTypes.CRYPTO.value)
     assets = Column(JSON)
 
+    __table_args__ = (
+        UniqueConstraint('tg_id', 'type', name='unique_tg_id_and_type'),
+    )

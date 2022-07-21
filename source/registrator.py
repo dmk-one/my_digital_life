@@ -4,8 +4,7 @@ from aiogram.dispatcher.filters import Text
 
 from source.handlers.cancel_state_handlers import cancel_state
 from source.handlers.start import start_bot
-from source.handlers.assets import crypto_price, get_crypto_price, \
-    FSMCrypto, get_assets_menu, get_crypto_assets
+from source.handlers.assets import *
 from source.handlers.user import get_main_menu_keyboards, return_message, add_user_phone
 from source.handlers.admin import machine_state, \
     load_name, load_photo, is_admin, is_moderator_chat, FSMAdmin
@@ -21,14 +20,25 @@ def register_assets_handlers(
     dispatcher: Dispatcher
 ):
     # ------------------ CRYPTO PRICE ------------------ #
-    dispatcher.register_message_handler(crypto_price, commands=['crypto_price'], state=None)
+    dispatcher.register_message_handler(get_crypto_price_state, commands=['crypto_price'], state=None)
     dispatcher.register_message_handler(cancel_state, state='*', commands='cancel')
     dispatcher.register_message_handler(cancel_state, Text(equals='cancel', ignore_case=True), state='*')
-    dispatcher.register_message_handler(get_crypto_price, state=FSMCrypto.crypto_name)
+    dispatcher.register_message_handler(get_crypto_price, state=FSMGetCryptoPrice.crypto_name)
 
-    # ------------------ ASSETS ------------------ #
+    # ------------------ ADD CRYPTO ------------------ #
+    dispatcher.register_message_handler(add_crypto_asset_state_starter, commands=['one'], state=None)
+    dispatcher.register_message_handler(cancel_state, state='*', commands='cancel')
+    dispatcher.register_message_handler(cancel_state, Text(equals='cancel', ignore_case=True), state='*')
+    dispatcher.register_message_handler(save_crypto_asset_name, state=FSMCryptoAsset.crypto_name)
+    dispatcher.register_message_handler(save_crypto_asset_value, state=FSMCryptoAsset.value)
+    dispatcher.register_message_handler(add_crypto_asset, state=FSMCryptoAsset.value)
+
+    # ------------------ ASSETS MENU ------------------ #
     dispatcher.register_message_handler(get_assets_menu, commands=['my_assets'])
-    dispatcher.register_message_handler(get_crypto_assets, commands=['crypto_assets'])
+    dispatcher.register_message_handler(get_crypto_assets_menu, commands=['crypto_assets'])
+
+    # ------------------ CRYPTO ASSETS MENU ------------------ #
+    dispatcher.register_message_handler(get_crypto_assets, commands=['show_crypto_assets'])
 
 
 def register_admin_handlers(

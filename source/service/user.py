@@ -2,14 +2,17 @@ import datetime
 
 from source.service import domain
 from source.provider.user import UsersProvider
+from .assets import AssetsService
 
 
 class UserService:
 
     _provider: UsersProvider
+    _s_assets: AssetsService
 
     def __init__(self):
         self._provider = UsersProvider()
+        self._s_assets = AssetsService()
 
     async def create(
         self,
@@ -45,6 +48,8 @@ class UserService:
             registration_date=registration_date,
             phone_number=phone_number
         )
+
+        await self._s_assets.create(tg_id)
 
         return user
 
