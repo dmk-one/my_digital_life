@@ -27,13 +27,13 @@ def register_assets_handlers(
     dispatcher.register_message_handler(CryptoPriceHandler().get_crypto_price, state=FSMGetCryptoPrice.crypto_name)
 
     # ----------- ADD CRYPTO ----------- #
-    crypto_asset_state_handler = CryptoAssetStateHandler()
+    cash = CryptoAssetStateHandler()
 
-    dispatcher.register_message_handler(crypto_asset_state_handler.state_starter, commands=['add_crypto_asset'])
+    dispatcher.register_message_handler(cash.state_starter, commands=['add_crypto_asset'])
     dispatcher.register_message_handler(cancel_state, state='*', commands='cancel')
     dispatcher.register_message_handler(cancel_state, Text(equals='cancel', ignore_case=True), state='*')
-    dispatcher.register_message_handler(crypto_asset_state_handler.save_asset_name_in_state_data, state=FSMAddCryptoAsset.crypto_name)
-    dispatcher.register_message_handler(crypto_asset_state_handler.save_asset_value_in_state_data, state=FSMAddCryptoAsset.value)
+    dispatcher.register_message_handler(cash.save_asset_name_in_state_data, state=FSMAddCryptoAsset.crypto_name)
+    dispatcher.register_message_handler(cash.save_asset_value_in_state_data, state=FSMAddCryptoAsset.value)
 
     # ----------- ASSETS MENU ----------- #
     dispatcher.register_message_handler(get_assets_menu, commands=['my_assets'])
