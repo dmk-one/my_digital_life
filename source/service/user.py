@@ -49,7 +49,7 @@ class UserService:
             phone_number=phone_number
         )
 
-        await self._s_assets.create(tg_id)
+        await self._s_assets.create_record_for_new_user(tg_id)
 
         return user
 

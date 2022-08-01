@@ -290,8 +290,7 @@ class BaseAlchemyModelProvider:
     from db, in get method, in insert method, in update method and in
     get_or_insert method
     _multiple_records_adapter is required async callable object to adapt
-    multiple orm models objects to another type object. It uses in select,
-    bulk_insert, bulk_update methods
+    multiple orm models objects to another type object. It uses in select
 
     """
 
@@ -617,25 +616,6 @@ class BaseAlchemyModelProvider:
         await self.session.commit()
         return result
 
-    async def _do_bulk_insert(
-        self,
-        VT: Tuple[Mapping[str, Any]],
-    ) -> List[Union[str, int]]:
-        """
-        Does bulk inserts to table and returns first pk column values of each inserted rows
-        """
-        insert_stmt = self._insert_stmt
-        if not insert_stmt:
-            insert_stmt = insert(self._get_mapper)
-
-        insert_stmt = insert_stmt.values(VT)
-
-        insert_stmt = self._form_returning_stmt(stmt=insert_stmt)
-
-        result = await self.session.scalar(insert_stmt)
-        await self.session.commit()
-        return result
-
     async def _do_update(
         self,
         filters,
@@ -643,23 +623,6 @@ class BaseAlchemyModelProvider:
     ) -> Union[int, str]:
         """
         This method expects only one row to update and returns the row if this necessary
-        """
-        stmt = self._base_update_stmt(filters, values)
-
-        # something went wrong, we couldn't find any solutions then `execution_options={"synchronize_session": False}`
-        # see more in https://stackoverflow.com/questions/51221686/sqlalchemy-cannot-evaluate-binaryexpression-with-operator
-
-        result = await self.session.scalar(stmt, execution_options={"synchronize_session": False})
-        await self.session.commit()
-        return result
-
-    async def _do_bulk_update(
-        self,
-        filters,
-        values
-    ) -> List[Union[int, str]]:
-        """
-        This method expects multiple rows to update and returns the rows if this necessary
         """
         stmt = self._base_update_stmt(filters, values)
 
@@ -792,22 +755,6 @@ class BaseAlchemyModelProvider:
             filters={first_pk_column_name + '__e': record_pk_value}
         )
 
-    async def bulk_insert(
-        self,
-        VT: Tuple[Dict[str, Any]]
-    ):
-        """
-        Make bulk insert and returns self.select result
-        """
-        first_pk_column_name: str = self._get_first_pk_column_name
-        records_pk_values: List[Union[int, str]] = await self._do_bulk_insert(VT=VT)
-
-        return await self.select(
-            filters={
-                first_pk_column_name + AlchemyFilters.LOOKUP_STRING + AlchemyFilters.IN_OPERATOR: records_pk_values
-            }
-        )
-
     async def get_or_insert(
         self,
         **values
@@ -866,44 +813,6 @@ class BaseAlchemyModelProvider:
             filters={ first_pk_column_name: record_pk_value }
         )
 
-    async def bulk_update(
-        self,
-        filters: Union[Mapping, Dict] = {},
-        **kwargs
-    ):
-        """
-        All keys in kwargs which contains self._filters.LOOKUP_STRING is
-        used as filters, rest used as values in update query.
-        So kwargs = {'name__e': 'some_name', 'name': 'new_some_name'}
-        here 'name__e' used build where clause and 'name' used to set value to
-        name column
-        """
-        kwargs = clear_from_ellipsis(kwargs)
-        filters = clear_from_ellipsis(filters)
-
-        # Separate filters and values from kwargs,
-        # so filters is string that contains LOOKUP_STRING
-        # and values is regular string
-        # that does not contain LOOKUP_STRING
-        values: Dict[str, Any] = dict()
-        for key, value in kwargs.items():
-            if self._filters.LOOKUP_STRING in key:
-                filters[key] = value
-            else:
-                values[key] = value
-
-        if not filters:
-            raise Exception('Filters Must Be Passed Exception')
-
-        first_pk_column_name: str = self._get_first_pk_column_name
-        records_pk_values: List[Union[int, str]] = await self._do_bulk_update(filters, values)
-
-        return await self.select(
-            filters={
-                first_pk_column_name + AlchemyFilters.LOOKUP_STRING + AlchemyFilters.IN_OPERATOR: records_pk_values
-            }
-        )
-
     async def update_or_insert(
         self,
         **kwargs
@@ -950,12 +859,3 @@ class BaseAlchemyModelProvider:
             raise Exception('Filters Must Be Passed Exception')
 
         await self._do_delete(filters=filters)
-
-    async def bulk_delete(
-        self,
-        filters: Union[Mapping, List] = {}
-    ) -> None:
-        """
-        Delete all rows from table that satisfies to filters
-        """
-        return await self.delete(filters=filters)

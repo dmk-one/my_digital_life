@@ -1,6 +1,10 @@
 class AssetAlreadyExist:
-    detail = 'This asset already exists'
+    detail = 'Этот актив уже есть в вашем портфеле'
 
 
 class AssetNameIncorrect:
-    detail = 'This asset name is incorrect'
+    detail = 'Некорректное название актива, проверьте название актива'
+
+
+class AssetNotExist:
+    detail = 'Этого актива нет в вашем портфолио'

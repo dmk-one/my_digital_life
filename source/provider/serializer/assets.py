@@ -7,12 +7,11 @@ from source.provider import models as orm_models
 async def record_to_assets(
     record: orm_models.Assets
 ) -> domain.Assets:
-    assets = domain.Assets(
+    return domain.Assets(
         tg_id=record.tg_id,
         assets=record.assets,
         assets_type=record.type
     )
-    return assets
 
 
 async def records_to_assets(

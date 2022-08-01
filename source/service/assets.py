@@ -1,11 +1,11 @@
-from typing import Optional, Union
+from typing import Union
 
 import requests
 
 from source.service import domain
 from source.provider.assets import AssetsProvider
 from source.provider.serializer import data_to_crypto_info
-from source.provider.exception import AssetAlreadyExist, AssetNameIncorrect
+from source.provider.exception import AssetAlreadyExist, AssetNameIncorrect, AssetNotExist
 
 
 class AssetsService:
@@ -65,7 +65,7 @@ class AssetsService:
         )
         return new_assets
 
-    async def create(
+    async def create_record_for_new_user(
         self,
         tg_id: int
     ):
@@ -86,4 +86,30 @@ class AssetsService:
             tg_id=tg_id,
             type=domain.AssetsTypes.OTHER.value,
             assets={}
+        )
+
+    async def update_crypto_asset(
+        self,
+        tg_id: int,
+        crypto_name: str,
+        value: float
+    ) -> Union[domain.Assets, AssetNameIncorrect, AssetNotExist]:
+
+        assets = await self._provider.get(
+            filters={
+                'tg_id': tg_id,
+                'type': domain.AssetsTypes.CRYPTO.value
+            }
+        )
+
+        if not assets.assets.get(crypto_name):
+            return AssetNotExist()
+
+        assets.assets[crypto_name] = value
+        return await self._provider.update(
+            assets=assets.assets,
+            filters={
+                'tg_id': tg_id,
+                'type': domain.AssetsTypes.CRYPTO.value
+            }
         )

@@ -1,8 +1,8 @@
 DB_HOST = 'localhost'
+DB_PORT = 5432
 DB_NAME = 'mdl'
 DB_USER = 'dmk'
 DB_PASSWORD = 'dmk5402'
-DB_PORT = 5432
 
 SQLALCHEMY_URL = f'postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
 ASYNC_SQLALCHEMY_URL = f'postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'

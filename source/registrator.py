@@ -2,10 +2,11 @@ from aiogram import types
 from aiogram.dispatcher import Dispatcher
 from aiogram.dispatcher.filters import Text
 
-from source.handlers.cancel_state_handlers import cancel_state
+from source.handlers.base_state import cancel_state, FSMGetCryptoPrice, FSMAddCryptoAsset, FSMEditCryptoAsset
 from source.handlers.start import start_bot
-from source.handlers.assets import *
+from source.handlers.crypto_assets import CryptoPriceHandler, CryptoAssetHandler, CryptoAssetStateHandler
 from source.handlers.user import get_main_menu_keyboards, return_message, add_user_phone
+from source.handlers.assets_menu import get_assets_menu, get_crypto_assets_menu
 from source.handlers.admin import machine_state, \
     load_name, load_photo, is_admin, is_moderator_chat, FSMAdmin
 
@@ -19,26 +20,27 @@ def register_start_handlers(
 def register_assets_handlers(
     dispatcher: Dispatcher
 ):
-    # ------------------ CRYPTO PRICE ------------------ #
-    dispatcher.register_message_handler(get_crypto_price_state, commands=['crypto_price'], state=None)
+    # ----------- CRYPTO PRICE ----------- #
+    dispatcher.register_message_handler(CryptoPriceHandler().get_crypto_price_state_starter, commands=['crypto_price'])
     dispatcher.register_message_handler(cancel_state, state='*', commands='cancel')
     dispatcher.register_message_handler(cancel_state, Text(equals='cancel', ignore_case=True), state='*')
-    dispatcher.register_message_handler(get_crypto_price, state=FSMGetCryptoPrice.crypto_name)
+    dispatcher.register_message_handler(CryptoPriceHandler().get_crypto_price, state=FSMGetCryptoPrice.crypto_name)
 
-    # ------------------ ADD CRYPTO ------------------ #
-    dispatcher.register_message_handler(add_crypto_asset_state_starter, commands=['one'], state=None)
+    # ----------- ADD CRYPTO ----------- #
+    crypto_asset_state_handler = CryptoAssetStateHandler()
+
+    dispatcher.register_message_handler(crypto_asset_state_handler.state_starter, commands=['add_crypto_asset'])
     dispatcher.register_message_handler(cancel_state, state='*', commands='cancel')
     dispatcher.register_message_handler(cancel_state, Text(equals='cancel', ignore_case=True), state='*')
-    dispatcher.register_message_handler(save_crypto_asset_name, state=FSMCryptoAsset.crypto_name)
-    dispatcher.register_message_handler(save_crypto_asset_value, state=FSMCryptoAsset.value)
-    dispatcher.register_message_handler(add_crypto_asset, state=FSMCryptoAsset.value)
+    dispatcher.register_message_handler(crypto_asset_state_handler.save_asset_name_in_state_data, state=FSMAddCryptoAsset.crypto_name)
+    dispatcher.register_message_handler(crypto_asset_state_handler.save_asset_value_in_state_data, state=FSMAddCryptoAsset.value)
 
-    # ------------------ ASSETS MENU ------------------ #
+    # ----------- ASSETS MENU ----------- #
     dispatcher.register_message_handler(get_assets_menu, commands=['my_assets'])
     dispatcher.register_message_handler(get_crypto_assets_menu, commands=['crypto_assets'])
 
-    # ------------------ CRYPTO ASSETS MENU ------------------ #
-    dispatcher.register_message_handler(get_crypto_assets, commands=['show_crypto_assets'])
+    # ----------- CRYPTO ASSETS MENU ----------- #
+    dispatcher.register_message_handler(CryptoAssetHandler().get_assets, commands=['show_crypto_assets'])
 
 
 def register_admin_handlers(
